@@ -38,7 +38,7 @@ b3e.editor.ExportManager = function(editor) {
     };
 
     project.trees.each(function(tree) {
-      var d = this.treeToData(tree, true);
+      var d = this.treeToDataFull(tree, true);
       d.id = tree._id;
       data.trees.push(d);
     }, this);
@@ -46,7 +46,7 @@ b3e.editor.ExportManager = function(editor) {
     return data;
   };
   
-  this.treeToData = function(tree, ignoreNodes) {
+  this.treeToDataFull = function(tree, ignoreNodes) {
     var project = editor.project.get();
     if (!project) return;
 
@@ -90,6 +90,58 @@ b3e.editor.ExportManager = function(editor) {
           description : block.description,
           properties  : block.properties,
           display     : {x:block.x, y:block.y}
+        };
+
+        var children = getBlockChildrenIds(block);
+        if (block.category === 'composite') {
+          d.children = children;
+        } else if (block.category === 'decorator') {
+          d.child = children[0];
+        }
+
+        data.nodes[block.id] = d;
+      }
+    });
+
+    return data;
+  };
+
+  this.treeToData = function(tree, ignoreNodes) {
+    var project = editor.project.get();
+    if (!project) return;
+
+    if (!tree) {
+      tree = project.trees.getSelected();
+    } else {
+      tree = project.trees.get(tree);
+      if (!tree) return;
+    }
+
+    var root = tree.blocks.getRoot();
+    var first = getBlockChildrenIds(root);
+    var data = {
+      version      : b3e.VERSION,
+      scope        : 'tree',
+      id           : tree._id,
+      title        : '',
+      description  : '',
+      root         : first[0] || null,
+      properties   : root.properties,
+      nodes        : {},
+    };
+
+    if (!ignoreNodes) {
+      data.custom_nodes = this.nodesToData();
+    }
+
+    tree.blocks.each(function(block) {
+      if (block.category !== 'root') {
+        var d ={
+          id          : block.id,
+          name        : block.name,
+          title       : '',
+          description : block.description,
+          properties  : block.properties,
         };
 
         var children = getBlockChildrenIds(block);
